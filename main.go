@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// TrieNode represents a node in the trie
 type TrieNode struct {
 	Children  map[rune]*TrieNode
 	IsEnd     bool
@@ -21,6 +22,7 @@ type TrieNode struct {
 	Frequency int
 }
 
+// State represents a state with name, code, and frequency
 type State struct {
 	Name      string `bson:"name"`
 	Code      string `bson:"code"`
@@ -30,6 +32,7 @@ type State struct {
 var root *TrieNode
 var client *mongo.Client
 
+// init initializes the root of the trie and loads states into the trie
 func init() {
 	root = &TrieNode{
 		Children: make(map[rune]*TrieNode),
@@ -38,6 +41,7 @@ func init() {
 	loadStatesIntoTrie()
 }
 
+// initMongoClient initializes the MongoDB client
 func initMongoClient() {
 	var err error
 	client, err = mongo.NewClient(options.Client().ApplyURI("mongodb://root:example@localhost:27017"))
@@ -50,6 +54,7 @@ func initMongoClient() {
 	}
 }
 
+// loadStatesIntoTrie loads states from MongoDB into the trie
 func loadStatesIntoTrie() {
 	collection := client.Database("statesDB").Collection("states")
 	cursor, err := collection.Find(context.Background(), bson.M{})
@@ -67,6 +72,7 @@ func loadStatesIntoTrie() {
 	}
 }
 
+// insert inserts a state into the trie
 func insert(root *TrieNode, state *State) {
 	node := root
 	for _, char := range state.Name {
@@ -86,6 +92,7 @@ func insert(root *TrieNode, state *State) {
 	log.Printf("Inserted state: %s, Code: %s, Frequency: %d", state.Name, state.Code, state.Frequency)
 }
 
+// searchAndUpdateFrequency searches the trie for states with the given prefix and updates their frequency
 func searchAndUpdateFrequency(root *TrieNode, prefix string) []*State {
 	node := root
 	for _, char := range prefix {
@@ -108,6 +115,7 @@ func searchAndUpdateFrequency(root *TrieNode, prefix string) []*State {
 	return results
 }
 
+// collectStates collects all states from the given trie node recursively
 func collectStates(node *TrieNode, results *[]*State) {
 	if node == nil {
 		return
@@ -121,12 +129,14 @@ func collectStates(node *TrieNode, results *[]*State) {
 	}
 }
 
+// sortStatesByFrequency sorts the list of states by their frequency
 func sortStatesByFrequency(states []*State) {
 	sort.Slice(states, func(i, j int) bool {
 		return states[i].Frequency > states[j].Frequency
 	})
 }
 
+// updateFrequency updates the frequency of the state in both the trie and MongoDB
 func updateFrequency(root *TrieNode, stateName string) {
 	node := root
 	for _, char := range stateName {
@@ -150,6 +160,7 @@ func updateFrequency(root *TrieNode, stateName string) {
 	}
 }
 
+// Define the GraphQL state type
 var stateType = graphql.NewObject(graphql.ObjectConfig{
 	Name: "State",
 	Fields: graphql.Fields{
@@ -165,6 +176,7 @@ var stateType = graphql.NewObject(graphql.ObjectConfig{
 	},
 })
 
+// Define the GraphQL query type
 var queryType = graphql.NewObject(graphql.ObjectConfig{
 	Name: "Query",
 	Fields: graphql.Fields{
